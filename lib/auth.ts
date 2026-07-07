@@ -86,7 +86,7 @@ async function supabaseServer() {
   return createServerClient(env.supabaseUrl, env.supabaseAnonKey, {
     cookies: {
       getAll: () => store.getAll(),
-      setAll: (list) => {
+      setAll: (list: { name: string; value: string; options?: Record<string, unknown> }[]) => {
         try {
           for (const { name, value, options } of list) store.set(name, value, options);
         } catch {

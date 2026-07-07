@@ -21,7 +21,7 @@ export const PLANS: Record<PlanId, { label: string; priceEnv: () => string; disp
 
 let _stripe: Stripe | null = null;
 export function stripe(): Stripe {
-  if (!_stripe) _stripe = new Stripe(env.stripeSecretKey, { apiVersion: "2025-07-30.basil" });
+  if (!_stripe) _stripe = new Stripe(env.stripeSecretKey, { apiVersion: "2025-08-27.basil" });
   return _stripe;
 }
 export const isMockPayments = () => !has.stripe;

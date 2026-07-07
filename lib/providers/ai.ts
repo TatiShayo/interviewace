@@ -67,15 +67,15 @@ class AnthropicProvider implements AiProvider {
 /* Mock fixtures — realistic content, never lorem ipsum (PLAYBOOK 1.5) */
 /* ------------------------------------------------------------------ */
 
-const CATS = ["behavioral", "role_specific", "company_culture", "curveball"] as const;
-const MIX: (typeof CATS)[number][] = [
+type Cat = "behavioral" | "role_specific" | "company_culture" | "curveball";
+const MIX: Cat[] = [
   "behavioral", "behavioral", "behavioral", "behavioral", "behavioral",
   "role_specific", "role_specific", "role_specific", "role_specific", "role_specific",
   "company_culture", "company_culture", "company_culture",
   "curveball", "curveball",
 ];
 
-const MOCK_QUESTION_SEEDS: Record<(typeof CATS)[number], string[]> = {
+const MOCK_QUESTION_SEEDS: Record<Cat, string[]> = {
   behavioral: [
     "Tell me about a time you shipped something under a hard deadline. What did you cut, and how did you decide?",
     "Describe a disagreement with a teammate about technical direction. How did you resolve it?",
@@ -102,7 +102,7 @@ const MOCK_QUESTION_SEEDS: Record<(typeof CATS)[number], string[]> = {
 };
 
 function mockPrepPack(): string {
-  let counters: Record<string, number> = {};
+  const counters: Record<string, number> = {};
   const questions = MIX.map((cat) => {
     counters[cat] = counters[cat] ?? 0;
     const q = MOCK_QUESTION_SEEDS[cat][counters[cat] % MOCK_QUESTION_SEEDS[cat].length];

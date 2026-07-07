@@ -20,7 +20,6 @@ export const UNTRUSTED_CLOSE = `</untrusted_content>`;
 /** Neutralize attempts to break out of the delimiter and strip control chars. */
 export function sanitizeUntrusted(text: string): string {
   return text
-    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
     .replace(/<\/?untrusted_content[^>]*>/gi, "[removed]")
     .slice(0, 60_000);
