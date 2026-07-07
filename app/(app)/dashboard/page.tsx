@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { requireUser } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
 import { Card, LinkButton } from "@/components/ui";
 import { formatDateHuman, daysUntil } from "@/lib/utils";
+import { FlashcardMode } from "./FlashcardMode";
+import { DashboardExtras } from "./DashboardExtras";
 
 /**
  * Dashboard: interview countdown, readiness score (avg of mock scores),
@@ -37,6 +40,12 @@ export default async function DashboardPage() {
 
   const days = daysUntil(profile?.interview_date);
   const dateHuman = formatDateHuman(profile?.interview_date);
+  const interviewPassed = days !== null && days < 0;
+
+  // Interview-day mode: condensed flashcard review replaces the full dashboard.
+  if (days === 0 && latestJob) {
+    return <FlashcardMode company={latestJob.company} answers={saved} />;
+  }
 
   // Next best action heuristic.
   const nextAction = !pack
@@ -100,6 +109,10 @@ export default async function DashboardPage() {
         <QuickLink href="/answers" title="Answer bank" desc={`${saved.length} saved`} />
         <QuickLink href="/negotiation" title="Negotiation" desc="Build your script" />
       </div>
+
+      <Suspense fallback={null}>
+        <DashboardExtras interviewPassed={interviewPassed} />
+      </Suspense>
     </div>
   );
 }
