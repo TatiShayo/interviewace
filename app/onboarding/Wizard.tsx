@@ -295,22 +295,24 @@ function PostingStep({
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="posting">Job posting</Label>
+          <PostingUrlFetch onFetched={setPosting} />
           <Textarea
             id="posting"
             rows={7}
             value={posting}
             onChange={(e) => setPosting(e.target.value)}
-            placeholder="Paste the full job description here…"
+            placeholder="…or paste the full job description here"
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="resume">Your resume (optional)</Label>
+          <ResumeUpload onExtracted={setResume} />
           <Textarea
             id="resume"
             rows={5}
             value={resume}
             onChange={(e) => setResume(e.target.value)}
-            placeholder="Paste your resume text so answers reference your real experience…"
+            placeholder="…or paste your resume text so answers reference your real experience"
           />
         </div>
         {error && (
@@ -326,6 +328,95 @@ function PostingStep({
         </p>
       </div>
     </StepShell>
+  );
+}
+
+/** Paste-a-link alternative to pasting posting text (BUILD_PROMPT feature 11). */
+function PostingUrlFetch({ onFetched }: { onFetched: (text: string) => void }) {
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function fetchUrl() {
+    if (!url.trim()) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/onboarding/parse-posting-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = (await res.json()) as { text?: string; error?: string };
+      if (!res.ok || !data.text) {
+        setErr(data.error ?? "Couldn't read that page — paste the posting below instead.");
+        return;
+      }
+      onFetched(data.text);
+    } catch {
+      setErr("Couldn't reach that page — paste the posting below instead.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-2">
+      <div className="flex gap-2">
+        <Input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Or paste a link to the posting…"
+          className="flex-1"
+        />
+        <Button type="button" variant="secondary" onClick={fetchUrl} disabled={busy || !url.trim()}>
+          {busy ? "Reading…" : "Fetch"}
+        </Button>
+      </div>
+      {err && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{err}</p>}
+    </div>
+  );
+}
+
+/** PDF/DOCX resume upload alternative to pasting text (BUILD_PROMPT feature 11). */
+function ResumeUpload({ onExtracted }: { onExtracted: (text: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  async function onChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setBusy(true);
+    setErr(null);
+    setFileName(file.name);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/onboarding/parse-resume", { method: "POST", body: form });
+      const data = (await res.json()) as { text?: string; error?: string };
+      if (!res.ok || !data.text) {
+        setErr(data.error ?? "Couldn't read that file — paste your resume below instead.");
+        return;
+      }
+      onExtracted(data.text);
+    } catch {
+      setErr("Upload failed — paste your resume below instead.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mb-2">
+      <label className="flex w-full cursor-pointer items-center justify-between rounded-[var(--radius)] border border-dashed border-[var(--color-line)] bg-white/60 px-3.5 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-navy)]">
+        <span>{busy ? "Reading…" : fileName ? `Uploaded: ${fileName}` : "Upload a PDF or DOCX résumé"}</span>
+        <input type="file" accept=".pdf,.docx" className="hidden" onChange={onChange} disabled={busy} />
+      </label>
+      {err && <p className="mt-1.5 text-xs text-[var(--color-danger)]">{err}</p>}
+    </div>
   );
 }
 

@@ -104,6 +104,15 @@ Mock data lives in `.mockdata/` (gitignored).
   aggregate `Db` methods already built for this (`countProfiles`,
   `countSubsByStatus`, `sumUsageSince`, `countSessionsSince`,
   `aggregateOutcomes`) — no per-user PII rendered.
+- **M6 (in progress)** Resume upload + job-posting-by-URL (BUILD_PROMPT
+  feature 11): `app/api/onboarding/parse-resume/route.ts` accepts PDF/DOCX
+  (magic-byte sniffed, 8MB cap, text-only extraction — no raw file persisted),
+  `app/api/onboarding/parse-posting-url/route.ts` calls the existing
+  SSRF-guarded `fetchExternal`/`htmlToText` (`lib/security/ssrf.ts`). Both
+  gated by `requireUser` (pre-paywall) + the `upload`/`fetchUrl` rate-limit
+  tiers. `app/onboarding/Wizard.tsx` gained a URL-fetch input above the
+  posting textarea and a file-upload dropzone above the resume textarea;
+  paste remains the fallback on any failure (never a dead end).
 
 ## Next (milestone order)
 - M5: Marketing/SEO — landing page polish (hero demo loop, pricing, FAQ,
@@ -118,9 +127,6 @@ Mock data lives in `.mockdata/` (gitignored).
   text-mode mock → scores), unit tests for AI JSON parsing with fixtures.
 
 ## Not yet built (tracked, not started)
-- Resume file upload (PDF via `pdf-parse`, DOCX via `mammoth`) + job-posting-
-  by-URL fetch (SSRF-guarded fetch exists in `lib/security/ssrf.ts` but no
-  route calls it yet). Onboarding currently accepts pasted text only for both.
 - `analytics.md` documenting every PostHog event (PLAYBOOK Part 5) — events
   are already being fired (`track(...)` calls throughout) but not catalogued.
 - Trial day-1/day-2 lifecycle emails (weakest-question nudge, readiness
