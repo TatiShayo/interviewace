@@ -17,8 +17,8 @@ export default async function AnswersPage() {
       <div className="py-10 text-center">
         <h1 className="font-display text-2xl font-semibold text-[var(--color-navy)]">Your answer bank is empty</h1>
         <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--color-muted)]">
-          Save outlines from your prep pack or improved answers from mock interviews — they'll collect here, ready for
-          your next interview too.
+          Save outlines from your prep pack or improved answers from mock interviews — they&apos;ll collect here, ready
+          for your next interview too.
         </p>
         <LinkButton href="/prep" className="mt-6">
           Browse your prep pack

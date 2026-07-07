@@ -6,7 +6,7 @@
  */
 import "server-only";
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, renderToBuffer, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import type { PrepQuestion, SavedAnswer } from "@/lib/types";
 
 const styles = StyleSheet.create({
