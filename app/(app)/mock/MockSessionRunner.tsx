@@ -153,7 +153,7 @@ export function MockSessionRunner({ jobId }: { jobId: string }) {
         <InterviewerOrb state="thinking" />
         <h2 className="mt-5 font-display text-xl font-semibold text-[var(--color-navy)]">Ready when you are</h2>
         <p className="mx-auto mt-2 max-w-sm text-sm text-[var(--color-muted)]">
-          Five questions from your {role || "prep"} pack for {company || "this role"}. Answer out loud — you'll get
+          Five questions from your {role || "prep"} pack for {company || "this role"}. Answer out loud — you&apos;ll get
           scored on structure, relevance, confidence, and conciseness.
         </p>
         <Button onClick={start} size="lg" className="mt-6">
@@ -217,7 +217,7 @@ export function MockSessionRunner({ jobId }: { jobId: string }) {
         </div>
         {remaining !== null && remaining <= 0 && (
           <p className="text-xs text-[var(--color-muted)]">
-            You've used today's 3 practice sessions — see you tomorrow.
+            You&apos;ve used today&apos;s 3 practice sessions — see you tomorrow.
           </p>
         )}
       </div>

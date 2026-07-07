@@ -37,7 +37,6 @@ export function Recorder({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (timerRef.current) clearInterval(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function stopTracks() {

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     let sessionId: string;
     let question: string;
     let transcript: string;
-    let audioPath: string | null = null;
+    const audioPath: string | null = null;
 
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
