@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
 import { Card, LinkButton } from "@/components/ui";
-import { formatDateHuman, daysUntil } from "@/lib/utils";
+import { formatDateHuman, daysUntil, practiceStreak } from "@/lib/utils";
 import { FlashcardMode } from "./FlashcardMode";
 import { DashboardExtras } from "./DashboardExtras";
 
@@ -41,6 +41,7 @@ export default async function DashboardPage() {
   const days = daysUntil(profile?.interview_date);
   const dateHuman = formatDateHuman(profile?.interview_date);
   const interviewPassed = days !== null && days < 0;
+  const streak = practiceStreak(sessions.map((s) => s.started_at));
 
   // Interview-day mode: condensed flashcard review replaces the full dashboard.
   if (days === 0 && latestJob) {
@@ -72,7 +73,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Metric row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Metric label="Countdown" value={days !== null && days >= 0 ? `${days}` : "—"} unit={days === 1 ? "day" : "days"} />
         <Metric
           label="Readiness"
@@ -81,6 +82,7 @@ export default async function DashboardPage() {
           score
         />
         <Metric label="Answer bank" value={`${saved.length}`} unit={saved.length === 1 ? "answer" : "answers"} />
+        <Metric label="Practice streak" value={`${streak}`} unit={streak === 1 ? "day" : "days"} />
       </div>
 
       {/* Next best action */}

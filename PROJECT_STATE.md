@@ -84,6 +84,9 @@ Mock data lives in `.mockdata/` (gitignored).
   - `app/(app)/dashboard/FlashcardMode.tsx` — day-of interview-day mode: the
     whole dashboard swaps to a condensed flip-through flashcard review of the
     answer bank.
+  - `app/(app)/dashboard/page.tsx` — 4-metric row (countdown, readiness,
+    answer bank, practice streak via `lib/utils.ts` `practiceStreak()` —
+    consecutive days with a mock session).
   - `lib/emails/lifecycle.ts` + `app/api/cron/lifecycle/` — CRON_SECRET-gated
     daily cron sends day-before/day-of(+cheat-sheet attachment)/day-after
     emails by scanning `db().listEntitledProfilesWithInterviewDate()` (added
@@ -91,6 +94,16 @@ Mock data lives in `.mockdata/` (gitignored).
 - **Verification gate passed after every milestone above**: `tsc --noEmit`,
   `eslint .`, and `npm run build` (full `next build`, 24 routes) all exit 0 as
   of the last commit on this branch.
+- **M6 (in progress)** `/admin` internal metrics page (`app/admin/page.tsx`):
+  ADMIN_EMAILS-allowlist gated (redirects to /dashboard if not allowlisted,
+  /login if unauthenticated), MRR estimate (blended plan pricing x active
+  subs — no per-plan breakdown is stored by design, avoids a full
+  subscription-row dump), trials active, trial→paid conversion %, mock
+  sessions/24h, AI cost per active user (30d) + % of ARPU vs the 15% target,
+  subscription status breakdown, outcome-survey offer rate. Uses only the
+  aggregate `Db` methods already built for this (`countProfiles`,
+  `countSubsByStatus`, `sumUsageSince`, `countSessionsSince`,
+  `aggregateOutcomes`) — no per-user PII rendered.
 
 ## Next (milestone order)
 - M5: Marketing/SEO — landing page polish (hero demo loop, pricing, FAQ,
@@ -105,10 +118,6 @@ Mock data lives in `.mockdata/` (gitignored).
   text-mode mock → scores), unit tests for AI JSON parsing with fixtures.
 
 ## Not yet built (tracked, not started)
-- `/admin` internal dashboard (MRR, trials active, trial conversion %, mock
-  sessions/day, AI cost/user) — `countProfiles`/`countSubsByStatus`/
-  `sumUsageSince`/`countSessionsSince`/`aggregateOutcomes` already exist on
-  `Db` for this.
 - Resume file upload (PDF via `pdf-parse`, DOCX via `mammoth`) + job-posting-
   by-URL fetch (SSRF-guarded fetch exists in `lib/security/ssrf.ts` but no
   route calls it yet). Onboarding currently accepts pasted text only for both.
