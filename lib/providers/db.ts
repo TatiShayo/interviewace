@@ -72,6 +72,8 @@ export interface Db {
   deleteAllUserData(userId: string): Promise<void>;
   exportUserData(userId: string): Promise<Record<string, unknown>>;
   purgeStaleResumes(cutoffIso: string): Promise<number>;
+  // lifecycle email cron (BUILD_PROMPT 14/15): scoped fields only, never full profile dumps
+  listEntitledProfilesWithInterviewDate(): Promise<{ id: string; email: string; interview_date: string }[]>;
 }
 
 function today(): string {
@@ -365,6 +367,15 @@ class MockDb implements Db {
     this.write(s);
     return before - s.resumes.length;
   }
+  async listEntitledProfilesWithInterviewDate() {
+    const s = this.read();
+    const entitled = new Set(
+      s.subscriptions.filter((x) => x.status === "trialing" || x.status === "active" || x.status === "past_due").map((x) => x.user_id)
+    );
+    return s.profiles
+      .filter((p) => p.interview_date && entitled.has(p.id))
+      .map((p) => ({ id: p.id, email: p.email, interview_date: p.interview_date as string }));
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -560,6 +571,19 @@ class SupabaseDb implements Db {
     if (paths.length) await this.c.storage.from("resumes").remove(paths);
     if (rows.length) await this.one(this.c.from("resumes").delete().lt("created_at", cutoffIso));
     return rows.length;
+  }
+  async listEntitledProfilesWithInterviewDate() {
+    const subs =
+      (await this.one<{ user_id: string }[]>(
+        this.c.from("subscriptions").select("user_id").in("status", ["trialing", "active", "past_due"])
+      )) ?? [];
+    const ids = subs.map((s) => s.user_id);
+    if (ids.length === 0) return [];
+    const rows =
+      (await this.one<{ id: string; email: string; interview_date: string }[]>(
+        this.c.from("profiles").select("id,email,interview_date").in("id", ids).not("interview_date", "is", null)
+      )) ?? [];
+    return rows;
   }
 }
 
