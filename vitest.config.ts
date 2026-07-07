@@ -7,6 +7,11 @@ export default defineConfig({
     environment: "node",
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, ".") },
+    alias: {
+      "@": path.resolve(__dirname, "."),
+      // The real `server-only` package throws outside an RSC bundle; alias it
+      // to a no-op so server modules (prompts, ai gateway, db) unit-test.
+      "server-only": path.resolve(__dirname, "tests/helpers/server-only-stub.ts"),
+    },
   },
 });
