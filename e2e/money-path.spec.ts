@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { signUpAndReachDashboard } from "./helpers";
 
 /**
  * M8 — end-to-end money path against mock providers (zero third-party keys):
@@ -10,82 +11,14 @@ import { test, expect } from "@playwright/test";
  * dev mock-checkout (no Stripe key) which flips the subscription to `trialing`.
  */
 
-const JOB_POSTING = `Senior Product Manager — Growth at Northwind Labs.
-We are hiring a Senior PM to own our activation and onboarding funnel. You will
-run discovery with customers, define the roadmap, partner with engineering and
-design, and ship measurable improvements to trial-to-paid conversion. You should
-have 5+ years of product management experience, strong SQL and experimentation
-skills, and a track record of shipping growth features at scale. Bonus: prior
-experience with PLG motions and subscription pricing.`;
-
-const RESUME = `Jordan Rivera — Product Manager.
-At Brightwave I owned the onboarding funnel and lifted trial-to-paid conversion
-from 18% to 27% over two quarters by rebuilding the activation flow and running
-14 A/B tests. Led a squad of 4 engineers and 1 designer. Earlier at Contoso I
-shipped the self-serve upgrade path that added $1.2M ARR. Strong SQL, comfortable
-with experimentation platforms.`;
-
 test("new user completes the full money path to scored mock", async ({ page }) => {
-  const email = `e2e_${Date.now()}@example.com`;
-  const password = "test-password-123";
+  await signUpAndReachDashboard(page);
 
-  // --- Signup ---
-  await page.goto("/signup");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: /create account/i }).click();
-
-  // New users land in onboarding. Generous timeout: `next dev` compiles each
-  // route on first hit, and /signup + /onboarding compiling back-to-back can
-  // take well past a typical 30s budget on a cold cache.
-  await page.waitForURL(/\/onboarding/, { timeout: 60_000 });
-
-  // --- Onboarding step 1: role ---
-  await page.getByPlaceholder(/Senior Product Manager/i).fill("Senior Product Manager");
-  await page.getByRole("button", { name: /^Continue$/ }).click();
-
-  // Step 2: experience level (choice auto-advances)
-  await page.getByRole("button", { name: /Senior/ }).first().click();
-
-  // Step 3: interview date (in ~5 days)
-  const d = new Date();
-  d.setDate(d.getDate() + 5);
-  const iso = d.toISOString().slice(0, 10);
-  await page.locator('input[type="date"]').fill(iso);
-  await page.getByRole("button", { name: /^Continue$/ }).click();
-
-  // Step 4: biggest fear (auto-advances)
-  await page.getByRole("button", { name: /Behavioral/ }).first().click();
-
-  // Step 5: interview type (auto-advances)
-  await page.getByRole("button", { name: /Behavioral round/ }).click();
-
-  // Step 6: paste posting + resume, build the plan
-  await page.getByPlaceholder(/paste the full job description/i).fill(JOB_POSTING);
-  await page.getByPlaceholder(/paste your resume text/i).fill(RESUME);
-  await page.getByRole("button", { name: /Build my prep plan/i }).click();
-
-  // --- Paywall: personalized prep plan + trial CTA ---
-  // Extra generous: this step both compiles /paywall AND runs a real prep-pack
-  // generation call through the AI gateway.
-  await page.waitForURL(/\/paywall/, { timeout: 90_000 });
-  await expect(page.getByText(/Prep Plan —/i)).toBeVisible();
-  // At least one real, readable question should be present (unblurred teaser).
-  await expect(page.locator("ol li").first()).toBeVisible();
-
-  // --- Start the mock trial (dev mock-checkout flips sub to trialing) ---
-  await page.getByRole("button", { name: /Start .* free trial/i }).click();
-
-  // Lands on the entitled dashboard.
-  await page.waitForURL(/\/dashboard/, { timeout: 60_000 });
   // Job title/company come from the AI-parsed posting. With no ANTHROPIC_API_KEY
   // (this suite's default) that's the deterministic mock fixture ("Product
   // Manager" / "Acme Corp") rather than the literal posting text — match both
   // so this also passes when run against a real key.
   await expect(page.getByText(/Northwind Labs|Senior Product Manager|Acme Corp/i).first()).toBeVisible();
-
-  // Readiness + answer bank + streak metrics render.
-  await expect(page.getByText(/Readiness/i)).toBeVisible();
 
   // --- Text-mode mock interview ---
   await page.goto("/mock");
