@@ -6,11 +6,12 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { requireUser } from "@/lib/entitlement";
-import { db } from "@/lib/providers/db";
-import { isMockPayments, PLANS } from "@/lib/providers/payments";
-import { track } from "@/lib/providers/analytics";
+import { isMockPayments, runMockCheckout } from "@/lib/providers/payments";
 import type { PlanId } from "@/lib/types";
 
+// Kept for direct manual use (e.g. hitting the URL by hand in dev); the
+// paywall's real checkout flow calls `runMockCheckout` in-process instead
+// (see its docstring in lib/providers/payments.ts for why).
 export async function GET(req: NextRequest) {
   if (!isMockPayments()) {
     return NextResponse.json({ error: "Not available" }, { status: 404 });
@@ -23,20 +24,6 @@ export async function GET(req: NextRequest) {
     ? (planParam as PlanId)
     : "weekly";
 
-  const trialDays = PLANS[plan].trialDays;
-  const now = Date.now();
-  const periodMs = plan === "weekly" ? 7 : plan === "monthly" ? 30 : 60;
-  const currentPeriodEnd = new Date(now + (trialDays > 0 ? trialDays : periodMs) * 86_400_000).toISOString();
-
-  await db().upsertSubscription({
-    user_id: session.userId,
-    stripe_customer_id: `mock_cus_${session.userId.slice(0, 8)}`,
-    stripe_sub_id: `mock_sub_${session.userId.slice(0, 8)}`,
-    status: trialDays > 0 ? "trialing" : "active",
-    plan,
-    current_period_end: currentPeriodEnd,
-  });
-
-  track("trial_started", session.userId, { plan, mock: true });
+  await runMockCheckout(session.userId, plan);
   return NextResponse.redirect(new URL("/dashboard?checkout=success", req.url));
 }

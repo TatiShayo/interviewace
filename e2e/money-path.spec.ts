@@ -78,7 +78,11 @@ test("new user completes the full money path to scored mock", async ({ page }) =
 
   // Lands on the entitled dashboard.
   await page.waitForURL(/\/dashboard/, { timeout: 60_000 });
-  await expect(page.getByText(/Northwind Labs|Senior Product Manager/i).first()).toBeVisible();
+  // Job title/company come from the AI-parsed posting. With no ANTHROPIC_API_KEY
+  // (this suite's default) that's the deterministic mock fixture ("Product
+  // Manager" / "Acme Corp") rather than the literal posting text — match both
+  // so this also passes when run against a real key.
+  await expect(page.getByText(/Northwind Labs|Senior Product Manager|Acme Corp/i).first()).toBeVisible();
 
   // Readiness + answer bank + streak metrics render.
   await expect(page.getByText(/Readiness/i)).toBeVisible();

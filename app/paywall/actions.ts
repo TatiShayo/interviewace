@@ -8,7 +8,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
-import { createCheckoutUrl } from "@/lib/providers/payments";
+import { createCheckoutUrl, isMockPayments, runMockCheckout } from "@/lib/providers/payments";
 import { track } from "@/lib/providers/analytics";
 import type { PlanId } from "@/lib/types";
 
@@ -21,6 +21,15 @@ export async function startCheckout(formData: FormData): Promise<void> {
 
   const sub = await db().getSubscription(session.userId);
   track("checkout_started", session.userId, { plan });
+
+  // Mock mode: run the subscription flip in-process and redirect straight to
+  // a real page. Redirecting a Server Action to a Route Handler (not a page)
+  // gets soft-navigated by the Next.js client router, which never issues the
+  // follow-up request and stalls on /paywall (see runMockCheckout's docstring).
+  if (isMockPayments()) {
+    await runMockCheckout(session.userId, plan);
+    redirect("/dashboard?checkout=success");
+  }
 
   const url = await createCheckoutUrl({
     userId: session.userId,

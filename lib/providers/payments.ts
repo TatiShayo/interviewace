@@ -10,6 +10,8 @@
 import "server-only";
 import Stripe from "stripe";
 import { env, has } from "@/lib/env";
+import { db } from "@/lib/providers/db";
+import { track } from "@/lib/providers/analytics";
 import type { PlanId } from "@/lib/types";
 
 /** Server-side plan config (experiment-ready: env-overridable price IDs). */
@@ -52,6 +54,34 @@ export async function createCheckoutUrl(args: {
   });
   if (!session.url) throw new Error("Stripe did not return a checkout URL");
   return session.url;
+}
+
+/**
+ * Shared mock-checkout logic (flips the caller's subscription to trialing).
+ * Lives here (not in the `/api/dev/mock-checkout` Route Handler) so it can be
+ * called in-process from the paywall's Server Action: a Server Action's
+ * `redirect()` to an internal Route Handler (not a page) is soft-navigated by
+ * the Next.js client router, which never issues the follow-up request and
+ * strands the user on the previous page. Calling this directly and then
+ * redirecting straight to a real page (`/dashboard`) sidesteps that. The
+ * route handler itself still exists for direct manual use in dev.
+ */
+export async function runMockCheckout(userId: string, plan: PlanId): Promise<void> {
+  const trialDays = PLANS[plan].trialDays;
+  const now = Date.now();
+  const periodMs = plan === "weekly" ? 7 : plan === "monthly" ? 30 : 60;
+  const currentPeriodEnd = new Date(now + (trialDays > 0 ? trialDays : periodMs) * 86_400_000).toISOString();
+
+  await db().upsertSubscription({
+    user_id: userId,
+    stripe_customer_id: `mock_cus_${userId.slice(0, 8)}`,
+    stripe_sub_id: `mock_sub_${userId.slice(0, 8)}`,
+    status: trialDays > 0 ? "trialing" : "active",
+    plan,
+    current_period_end: currentPeriodEnd,
+  });
+
+  track("trial_started", userId, { plan, mock: true });
 }
 
 export async function createPortalUrl(customerId: string): Promise<string> {
