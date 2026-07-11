@@ -35,8 +35,10 @@ test("new user completes the full money path to scored mock", async ({ page }) =
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: /create account/i }).click();
 
-  // New users land in onboarding.
-  await page.waitForURL(/\/onboarding/, { timeout: 30_000 });
+  // New users land in onboarding. Generous timeout: `next dev` compiles each
+  // route on first hit, and /signup + /onboarding compiling back-to-back can
+  // take well past a typical 30s budget on a cold cache.
+  await page.waitForURL(/\/onboarding/, { timeout: 60_000 });
 
   // --- Onboarding step 1: role ---
   await page.getByPlaceholder(/Senior Product Manager/i).fill("Senior Product Manager");
@@ -64,7 +66,9 @@ test("new user completes the full money path to scored mock", async ({ page }) =
   await page.getByRole("button", { name: /Build my prep plan/i }).click();
 
   // --- Paywall: personalized prep plan + trial CTA ---
-  await page.waitForURL(/\/paywall/, { timeout: 60_000 });
+  // Extra generous: this step both compiles /paywall AND runs a real prep-pack
+  // generation call through the AI gateway.
+  await page.waitForURL(/\/paywall/, { timeout: 90_000 });
   await expect(page.getByText(/Prep Plan —/i)).toBeVisible();
   // At least one real, readable question should be present (unblurred teaser).
   await expect(page.locator("ol li").first()).toBeVisible();
@@ -73,7 +77,7 @@ test("new user completes the full money path to scored mock", async ({ page }) =
   await page.getByRole("button", { name: /Start .* free trial/i }).click();
 
   // Lands on the entitled dashboard.
-  await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 60_000 });
   await expect(page.getByText(/Northwind Labs|Senior Product Manager/i).first()).toBeVisible();
 
   // Readiness + answer bank + streak metrics render.

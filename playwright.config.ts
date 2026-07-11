@@ -11,16 +11,23 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  // Pre-compiles every route the spec visits so the test's own timeouts
+  // measure app behavior, not `next dev`'s on-demand webpack compile cost.
+  globalSetup: "./e2e/global-setup.ts",
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
-  timeout: 90_000,
-  expect: { timeout: 15_000 },
+  // Generous: `next dev` compiles each route on first hit, which can take
+  // well past typical e2e budgets on a cold cache / slow disk.
+  timeout: 240_000,
+  expect: { timeout: 20_000 },
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",
+    actionTimeout: 30_000,
+    navigationTimeout: 60_000,
     // Grant no mic: the mock flow uses the text-mode fallback deterministically.
     permissions: [],
   },
@@ -30,7 +37,7 @@ export default defineConfig({
     command: `npx next dev -p ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 240_000,
     env: {
       NEXT_PUBLIC_APP_URL: BASE_URL,
       NODE_ENV: "development",
