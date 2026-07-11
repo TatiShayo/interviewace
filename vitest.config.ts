@@ -5,6 +5,13 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.ts"],
     environment: "node",
+    // Slow Windows disk / AV-scanned I/O makes the default multi-worker pool's
+    // RPC channel time out during module transform (each worker duplicates
+    // resolution work, multiplying I/O contention). Running test files
+    // sequentially in a single worker avoids that without masking real bugs.
+    fileParallelism: false,
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
   resolve: {
     alias: {
