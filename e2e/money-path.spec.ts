@@ -91,11 +91,11 @@ test("new user completes the full money path to scored mock", async ({ page }) =
   await page.goto("/mock");
   await page.getByRole("button", { name: /Start mock interview/i }).click();
 
-  // First question asked -> switch to typing (headless has no mic).
-  await page.getByRole("button", { name: /Type instead/i }).click();
-
-  // Answer each of the 5 questions in text mode.
+  // Answer each of the 5 questions in text mode. The Recorder unmounts/remounts
+  // fresh for every question (each is a new answer), so "Type instead" must be
+  // clicked each time rather than once before the loop.
   for (let i = 0; i < 5; i++) {
+    await page.getByRole("button", { name: /Type instead/i }).click();
     const box = page.getByPlaceholder(/Type your answer/i);
     await expect(box).toBeVisible({ timeout: 20_000 });
     await box.fill(
