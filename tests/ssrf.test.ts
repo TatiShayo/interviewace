@@ -72,7 +72,9 @@ describe("assertPublicHost — protocol + host guards", () => {
   });
 
   it("allows a literal public IP host", async () => {
-    await expect(assertPublicHost(new URL("http://8.8.8.8/"))).resolves.toBeUndefined();
+    // Returns the vetted address so the connection can be pinned to it
+    // (DNS-rebinding TOCTOU defense).
+    await expect(assertPublicHost(new URL("http://8.8.8.8/"))).resolves.toEqual({ address: "8.8.8.8", family: 4 });
   });
 });
 

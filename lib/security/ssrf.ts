@@ -6,6 +6,8 @@
 import "server-only";
 import dns from "node:dns/promises";
 import net from "node:net";
+import http from "node:http";
+import https from "node:https";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 10_000;
@@ -34,18 +36,23 @@ export function isPrivateIp(ip: string): boolean {
 
 export class SsrfBlockedError extends Error {}
 
-export async function assertPublicHost(url: URL): Promise<void> {
+/**
+ * Validate the target host and return the vetted IP to pin the connection to.
+ * Resolving here AND connecting to this exact address (see pinnedRequest)
+ * closes the DNS-rebinding TOCTOU: the IP that was checked is the IP dialed.
+ */
+export async function assertPublicHost(url: URL): Promise<{ address: string; family: 4 | 6 }> {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new SsrfBlockedError("Only http(s) URLs are allowed");
   }
   if (net.isIP(url.hostname)) {
     if (isPrivateIp(url.hostname)) throw new SsrfBlockedError("Blocked IP range");
-    return;
+    return { address: url.hostname, family: net.isIPv6(url.hostname) ? 6 : 4 };
   }
   if (url.hostname === "localhost" || url.hostname.endsWith(".local") || url.hostname.endsWith(".internal")) {
     throw new SsrfBlockedError("Blocked host");
   }
-  let addrs: { address: string }[];
+  let addrs: { address: string; family: number }[];
   try {
     addrs = await dns.lookup(url.hostname, { all: true });
   } catch {
@@ -54,50 +61,86 @@ export async function assertPublicHost(url: URL): Promise<void> {
   if (addrs.length === 0 || addrs.some((a) => isPrivateIp(a.address))) {
     throw new SsrfBlockedError("Blocked IP range");
   }
+  const pick = addrs[0];
+  return { address: pick.address, family: pick.family === 6 ? 6 : 4 };
+}
+
+interface PinnedResponse {
+  status: number;
+  location: string | null;
+  body: string;
+}
+
+/**
+ * HTTP(S) GET that connects to a pre-validated IP while keeping the original
+ * hostname for the Host header and TLS SNI/cert validation. The custom
+ * `lookup` always returns the pinned address, so no second DNS resolution can
+ * swap in a private IP after the check (DNS-rebinding defense). Body is read
+ * with a hard streaming byte cap and the socket is destroyed once exceeded.
+ */
+function pinnedRequest(url: URL, pin: { address: string; family: 4 | 6 }): Promise<PinnedResponse> {
+  return new Promise((resolve, reject) => {
+    const mod = url.protocol === "https:" ? https : http;
+    const req = mod.request(
+      url,
+      {
+        method: "GET",
+        headers: { "User-Agent": "InterviewAceBot/1.0 (+job posting reader)", Accept: "text/html,text/plain" },
+        timeout: TIMEOUT_MS,
+        lookup: (_hostname, options, cb) => {
+          // Ignore the resolver entirely — connect only to the vetted IP.
+          if (typeof options === "object" && options.all) {
+            (cb as unknown as (e: null, a: { address: string; family: number }[]) => void)(null, [pin]);
+          } else {
+            cb(null, pin.address, pin.family);
+          }
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        let total = 0;
+        res.on("data", (chunk: Buffer) => {
+          total += chunk.byteLength;
+          if (total > MAX_BYTES) {
+            res.destroy(); // stop streaming past the cap
+            return;
+          }
+          chunks.push(chunk);
+        });
+        const done = () =>
+          resolve({
+            status: res.statusCode ?? 0,
+            location: res.headers.location ?? null,
+            body: Buffer.concat(chunks).toString("utf8"),
+          });
+        res.on("end", done);
+        res.on("close", done);
+        res.on("error", done); // capped/destroyed streams still return what we have
+      }
+    );
+    req.on("timeout", () => req.destroy(new Error("Fetch timed out")));
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 /** Fetch an external page with SSRF protections. Returns raw body text. */
 export async function fetchExternal(rawUrl: string): Promise<string> {
   const url = new URL(rawUrl);
-  await assertPublicHost(url);
-  const res = await fetch(url.toString(), {
-    redirect: "manual", // do not follow redirects into private ranges
-    headers: { "User-Agent": "InterviewAceBot/1.0 (+job posting reader)", Accept: "text/html,text/plain" },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
+  const pin = await assertPublicHost(url);
+  const res = await pinnedRequest(url, pin);
   if (res.status >= 300 && res.status < 400) {
-    const loc = res.headers.get("location");
-    if (!loc) throw new Error("Redirect without location");
-    const next = new URL(loc, url);
-    await assertPublicHost(next);
-    const res2 = await fetch(next.toString(), {
-      redirect: "manual",
-      headers: { "User-Agent": "InterviewAceBot/1.0 (+job posting reader)", Accept: "text/html,text/plain" },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!res2.ok) throw new Error(`Fetch failed (${res2.status})`);
-    return readCapped(res2);
+    // One manual redirect hop, re-validated and re-pinned — never auto-follow
+    // into private ranges.
+    if (!res.location) throw new Error("Redirect without location");
+    const next = new URL(res.location, url);
+    const pin2 = await assertPublicHost(next);
+    const res2 = await pinnedRequest(next, pin2);
+    if (res2.status < 200 || res2.status >= 300) throw new Error(`Fetch failed (${res2.status})`);
+    return res2.body;
   }
-  if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
-  return readCapped(res);
-}
-
-async function readCapped(res: Response): Promise<string> {
-  const reader = res.body?.getReader();
-  if (!reader) return "";
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_BYTES) {
-      await reader.cancel();
-      break;
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+  if (res.status < 200 || res.status >= 300) throw new Error(`Fetch failed (${res.status})`);
+  return res.body;
 }
 
 /** Strip HTML to readable text before it goes anywhere near the LLM. */
