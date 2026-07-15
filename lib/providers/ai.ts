@@ -34,19 +34,39 @@ export function costCents(inputTokens: number, outputTokens: number): number {
   return Math.ceil(((inputTokens * 3 + outputTokens * 15) / 1_000_000) * 100);
 }
 
+/** Transient upstream failures worth one retry: network blips, rate limits, 5xx. */
+function isTransient(err: unknown): boolean {
+  const status = (err as { status?: number })?.status;
+  if (status === 429 || (typeof status === "number" && status >= 500)) return true;
+  // SDK connection/timeout errors carry no HTTP status.
+  const name = (err as { name?: string })?.name ?? "";
+  return name === "APIConnectionError" || name === "APIConnectionTimeoutError";
+}
+
 class AnthropicProvider implements AiProvider {
   private client = new Anthropic({ apiKey: env.anthropicApiKey });
   async complete({ system, user, maxTokens }: { system: string; user: string; maxTokens: number; task: AiTask }): Promise<AiResult> {
-    const res = await this.client.messages.create({
-      model: MODEL,
-      max_tokens: maxTokens,
-      // System prompts are stable per task -> prompt caching (BUILD_PROMPT
-      // cost guard). Volatile user content stays after the breakpoint.
-      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-      // JSON tasks don't benefit from visible thinking; keep latency low.
-      thinking: { type: "disabled" },
-      messages: [{ role: "user", content: user }],
-    });
+    const call = () =>
+      this.client.messages.create({
+        model: MODEL,
+        max_tokens: maxTokens,
+        // System prompts are stable per task -> prompt caching (BUILD_PROMPT
+        // cost guard). Volatile user content stays after the breakpoint.
+        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+        // JSON tasks don't benefit from visible thinking; keep latency low.
+        thinking: { type: "disabled" },
+        messages: [{ role: "user", content: user }],
+      });
+    let res;
+    try {
+      res = await call();
+    } catch (err) {
+      // Retry ONCE with a short backoff on a transient failure only; never on a
+      // 4xx (bad request / auth) which would just fail again and waste latency.
+      if (!isTransient(err)) throw err;
+      await new Promise((r) => setTimeout(r, 600));
+      res = await call();
+    }
     if (res.stop_reason === "refusal") throw new Error("AI provider refused the request");
     const text = res.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")

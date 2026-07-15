@@ -49,7 +49,7 @@ export interface Db {
   listAnswersByUser(userId: string): Promise<MockAnswer[]>;
   // answer bank
   saveAnswer(a: { user_id: string; question: string; answer: string; source: "star" | "mock" }): Promise<SavedAnswer>;
-  listSavedAnswers(userId: string): Promise<SavedAnswer[]>;
+  listSavedAnswers(userId: string, limit?: number): Promise<SavedAnswer[]>;
   deleteSavedAnswer(id: string, userId: string): Promise<void>;
   // subscriptions
   getSubscription(userId: string): Promise<Subscription | null>;
@@ -251,8 +251,11 @@ class MockDb implements Db {
     this.write(s);
     return row;
   }
-  async listSavedAnswers(userId: string) {
-    return this.read().saved_answers.filter((x) => x.user_id === userId).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  async listSavedAnswers(userId: string, limit = 500) {
+    return this.read()
+      .saved_answers.filter((x) => x.user_id === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit);
   }
   async deleteSavedAnswer(id: string, userId: string) {
     const s = this.read();
@@ -473,8 +476,8 @@ class SupabaseDb implements Db {
   async saveAnswer(a: Parameters<Db["saveAnswer"]>[0]) {
     return (await this.one<SavedAnswer>(this.c.from("saved_answers").insert(a).select().single()))!;
   }
-  async listSavedAnswers(userId: string) {
-    return (await this.one<SavedAnswer[]>(this.c.from("saved_answers").select("*").eq("user_id", userId).order("created_at", { ascending: false }))) ?? [];
+  async listSavedAnswers(userId: string, limit = 500) {
+    return (await this.one<SavedAnswer[]>(this.c.from("saved_answers").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit))) ?? [];
   }
   async deleteSavedAnswer(id: string, userId: string) {
     await this.one(this.c.from("saved_answers").delete().eq("id", id).eq("user_id", userId));
