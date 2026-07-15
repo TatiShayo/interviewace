@@ -5,15 +5,23 @@
  * protected by CRON_SECRET so it can't be triggered by the public internet.
  */
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
 import { db } from "@/lib/providers/db";
 import { daysUntil } from "@/lib/utils";
 import { sendDayBeforePepEmail, sendDayOfGoodLuckEmail, sendOutcomeSurveyEmail } from "@/lib/emails/lifecycle";
 import { reportError } from "@/lib/providers/monitoring";
 
+/** Constant-time bearer-token check so the secret can't be recovered by timing. */
+function cronAuthorized(auth: string | null): boolean {
+  if (!env.cronSecret || !auth) return false;
+  const expected = Buffer.from(`Bearer ${env.cronSecret}`);
+  const got = Buffer.from(auth);
+  return expected.length === got.length && timingSafeEqual(expected, got);
+}
+
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (!env.cronSecret || auth !== `Bearer ${env.cronSecret}`) {
+  if (!cronAuthorized(req.headers.get("authorization"))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

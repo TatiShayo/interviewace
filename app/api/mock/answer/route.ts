@@ -14,6 +14,8 @@ import { rateLimit, LIMITS } from "@/lib/security/ratelimit";
 import { track } from "@/lib/providers/analytics";
 
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15MB cap (short spoken answers)
+const MAX_TRANSCRIPT_CHARS = 20_000; // spoken answers are short; reject essays before they hit the LLM/DB
+const MAX_QUESTION_CHARS = 2_000; // interview prompts are one or two sentences
 
 export async function POST(req: Request) {
   try {
@@ -48,6 +50,8 @@ export async function POST(req: Request) {
     }
 
     if (!sessionId || !question) throw new HttpError(400, "Missing session or question.");
+    if (question.length > MAX_QUESTION_CHARS) throw new HttpError(400, "That question is too long.");
+    if (transcript.length > MAX_TRANSCRIPT_CHARS) throw new HttpError(400, "That answer is too long — keep it under a few minutes of speech.");
     const mockSession = await db().getSession(sessionId, session.userId);
     if (!mockSession) throw new HttpError(404, "Session not found.");
 
