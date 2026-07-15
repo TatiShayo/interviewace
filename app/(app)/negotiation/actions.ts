@@ -7,6 +7,7 @@
 import { requireEntitled } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
 import { generateJson } from "@/lib/ai/generate";
+import { limitOr, LIMITS } from "@/lib/security/ratelimit";
 import { negotiationSchema, roleplaySchema } from "@/lib/ai/schemas";
 import {
   negotiationSystemPrompt,
@@ -32,6 +33,9 @@ export async function generateNegotiationScript(args: {
   competing: boolean;
 }): Promise<{ ok: true; script: NegotiationOut } | { ok: false; error: string }> {
   const session = await requireEntitled();
+  const limited = limitOr(`negotiation:${session.userId}`, LIMITS.ai);
+  if (limited) return { ok: false, error: limited };
+
   const jobs = await db().listJobs(session.userId);
   const role = jobs[0]?.title ?? "this role";
 
@@ -56,6 +60,9 @@ export async function roleplayReply(args: {
   history: { speaker: "recruiter" | "candidate"; text: string }[];
 }): Promise<{ ok: true; reply: RoleplayOut } | { ok: false; error: string }> {
   const session = await requireEntitled();
+  const limited = limitOr(`roleplay:${session.userId}`, LIMITS.ai);
+  if (limited) return { ok: false, error: limited };
+
   try {
     const out = await generateJson({
       userId: session.userId,

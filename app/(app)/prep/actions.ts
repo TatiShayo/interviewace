@@ -8,12 +8,16 @@
 import { requireEntitled } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
 import { generatePrepPack } from "@/lib/ai/prepPack";
+import { limitOr, LIMITS } from "@/lib/security/ratelimit";
 import { track } from "@/lib/providers/analytics";
 
 export async function regeneratePrepPack(
   jobId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await requireEntitled();
+  const limited = limitOr(`regen_prep:${session.userId}`, LIMITS.ai);
+  if (limited) return { ok: false, error: limited };
+
   const job = await db().getJob(jobId, session.userId);
   if (!job) return { ok: false, error: "We couldn't find that job posting." };
 

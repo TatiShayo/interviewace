@@ -4,6 +4,7 @@
 import { requireEntitled } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
 import { generateJson } from "@/lib/ai/generate";
+import { limitOr, LIMITS } from "@/lib/security/ratelimit";
 import { letterSchema, followupSchema } from "@/lib/ai/schemas";
 import { coverLetterSystemPrompt, followupSystemPrompt, letterUserPrompt } from "@/lib/prompts";
 import { track } from "@/lib/providers/analytics";
@@ -22,6 +23,9 @@ export async function generateCoverLetter(
   extra: string
 ): Promise<{ ok: true; letter: LetterOut } | { ok: false; error: string }> {
   const session = await requireEntitled();
+  const limited = limitOr(`cover_letter:${session.userId}`, LIMITS.ai);
+  if (limited) return { ok: false, error: limited };
+
   const jobs = await db().listJobs(session.userId);
   const job = jobs[0];
   if (!job) return { ok: false, error: "Generate a prep pack first so we know the role." };
@@ -54,6 +58,9 @@ export async function generateFollowupEmail(
   extra: string
 ): Promise<{ ok: true; email: FollowupOut } | { ok: false; error: string }> {
   const session = await requireEntitled();
+  const limited = limitOr(`followup:${session.userId}`, LIMITS.ai);
+  if (limited) return { ok: false, error: limited };
+
   const jobs = await db().listJobs(session.userId);
   const job = jobs[0];
   if (!job) return { ok: false, error: "Generate a prep pack first so we know the role." };

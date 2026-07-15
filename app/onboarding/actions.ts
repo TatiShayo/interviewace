@@ -9,6 +9,7 @@ import { requireUser } from "@/lib/entitlement";
 import { db } from "@/lib/providers/db";
 import { track } from "@/lib/providers/analytics";
 import { generatePrepPack } from "@/lib/ai/prepPack";
+import { limitOr, LIMITS } from "@/lib/security/ratelimit";
 import type { ExperienceLevel, InterviewFear, InterviewType } from "@/lib/types";
 
 const EXPERIENCE: ExperienceLevel[] = ["entry", "mid", "senior", "exec"];
@@ -71,6 +72,13 @@ export async function buildPrepPlan(input: {
   | { ok: false; error: string }
 > {
   const session = await requireUser();
+  // Cost-abuse guard: this is the only AI-invoking surface reachable pre-paywall
+  // (unpaid users), and each call fires two Claude requests. Without this an
+  // authenticated free account could hammer generation up to its full daily
+  // budget in seconds. The per-user daily budget remains the hard cost cap.
+  const limited = limitOr(`onboarding_prep:${session.userId}`, LIMITS.onboarding);
+  if (limited) return { ok: false, error: limited };
+
   const posting = input.posting_text.trim();
   if (posting.length < 40) return { ok: false, error: "Paste a bit more of the job posting so we can read it." };
 

@@ -10,6 +10,7 @@ import { db } from "@/lib/providers/db";
 import { generateJson } from "@/lib/ai/generate";
 import { starSuggestSchema } from "@/lib/ai/schemas";
 import { starSuggestSystemPrompt, starSuggestUserPrompt } from "@/lib/prompts";
+import { limitOr, LIMITS } from "@/lib/security/ratelimit";
 import { track } from "@/lib/providers/analytics";
 
 export async function suggestStarSection(args: {
@@ -18,6 +19,9 @@ export async function suggestStarSection(args: {
   draftSoFar: string;
 }): Promise<{ ok: true; suggestion: string } | { ok: false; error: string }> {
   const session = await requireEntitled();
+  const limited = limitOr(`star_suggest:${session.userId}`, LIMITS.ai);
+  if (limited) return { ok: false, error: limited };
+
   const resume = await db().getLatestResume(session.userId);
 
   try {

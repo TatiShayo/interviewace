@@ -39,10 +39,26 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
 export const LIMITS = {
   auth: { limit: 10, windowMs: 15 * 60_000 }, // 10 attempts / 15 min / key
   ai: { limit: 20, windowMs: 60_000 }, // 20 AI calls / min / user (budget is the real cap)
+  // Pre-paywall (unpaid) prep-pack generation. Fires 2 Claude calls each and is
+  // the only AI surface reachable before entitlement, so it gets a tighter
+  // throttle than the entitled `ai` tier — the per-user daily budget is still
+  // the hard cost cap, this bounds burst abuse from throwaway free accounts.
+  onboarding: { limit: 5, windowMs: 60_000 },
   upload: { limit: 10, windowMs: 60_000 },
   fetchUrl: { limit: 6, windowMs: 60_000 },
   general: { limit: 120, windowMs: 60_000 },
 } as const;
+
+/**
+ * Throttle helper for server actions (which return {ok:false} rather than an
+ * HTTP status). Returns a friendly error string when over the limit, else null.
+ * AI-invoking server actions must call this — the same cost-abuse guard the AI
+ * route handlers already enforce.
+ */
+export const RATE_LIMIT_MESSAGE = "You're going a little fast — give it a few seconds and try again.";
+export function limitOr(key: string, tier: { limit: number; windowMs: number }): string | null {
+  return rateLimit(key, tier.limit, tier.windowMs).ok ? null : RATE_LIMIT_MESSAGE;
+}
 
 export function clientIp(req: Request): string {
   const fwd = req.headers.get("x-forwarded-for");
