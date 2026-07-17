@@ -6,9 +6,16 @@
 
 ## Status: FEATURE-COMPLETE, UNDEPLOYED — updated 2026-07-11
 
+AUDIT COMPLETE — gate green (2026-07-17): `tsc --noEmit` clean, `eslint .` clean,
+`next build` OK, `vitest run` 69/69, `playwright test` 3/3. All PLAYBOOK Part 2
+controls verified in code (SSRF pinned-IP + redirect re-validation + streaming
+cap; IDOR user_id filter on every Db method; prompt-injection delimiters on every
+AI route; resume 8MB cap + magic-byte sniff pre-parse; atomic per-user token
+budget; requireEntitled on every AI route).
+
 M0-M8 done (all BUILD_PROMPT features + security tests + Playwright e2e).
 Full verification gate green: `tsc --noEmit`, `eslint .`, `next build`,
-`vitest run` (67/67), `playwright test` (3/3). Only remaining DoD gaps: actual
+`vitest run` (69/69), `playwright test` (3/3). Only remaining DoD gaps: actual
 Vercel deploy, and voice-mode (as opposed to text-mode) e2e coverage of the
 mock interview — see "Definition-of-Done status" below.
 
