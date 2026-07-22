@@ -146,3 +146,16 @@ and provider refusals are reported. `/admin` surfaces AI cost per active user.
 `NODE_OPTIONS=--max-old-space-size=4096 npx next build` · `npx vitest run` ·
 `npx playwright test` — see final session summary and PROJECT_STATE.md for the
 recorded green results.
+
+---
+
+## Fresh-Eyes Pass (July 22, 2026)
+
+- **Re-verification Gate**:
+  - `tsc --noEmit`: Exit 0 (passed cleanly)
+  - `eslint .`: Exit 0 (passed cleanly)
+  - `vitest run`: 69/69 tests passed in 7.07s across 5 suites (`rls-deny`, `ssrf`, `ai-json-parsing`, `prompt-injection`, `budget-killswitch`)
+  - `next build`: Exit 0 (compiled successfully in 66s, 34/34 static pages generated)
+- **Codebase Sweep**: Inspected SSRF IP-pinning mechanism (`lib/security/ssrf.ts`), untrusted prompt wrappers (`lib/prompts.ts`), entitlement checks, and per-user budget locks.
+- **Findings**: No new issues or security regressions found. Code quality and test coverage remain rock-solid.
+
