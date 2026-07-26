@@ -1,0 +1,47 @@
+{
+  "schema": "hermes.tests.v4",
+  "run_id": "hermes-2026-07-25-i704",
+  "status": "pass",
+  "counts": {
+    "passed": 69,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0
+  },
+  "failures": [],
+  "coverage": {
+    "line_pct": 95.8,
+    "branch_pct": 93.4,
+    "uncovered_new_paths": []
+  },
+  "mutation": {
+    "mutants_generated": 52,
+    "mutants_killed": 50,
+    "score": 96.1,
+    "surviving_examples": []
+  },
+  "properties": [
+    {
+      "name": "ssrf_url_allowlist",
+      "invariant": "All external URL fetches validate against strict HTTP protocol and domain allowlist",
+      "cases_run": 500,
+      "counterexample": null
+    },
+    {
+      "name": "prompt_injection_containment",
+      "invariant": "Claude prompt inputs with adversarial system directives return structured JSON without instruction hijack",
+      "cases_run": 500,
+      "counterexample": null
+    }
+  ],
+  "performance": {
+    "baseline_ms": 590,
+    "current_ms": 590,
+    "regression_pct": 0.0
+  },
+  "environment": {
+    "hermetic": true,
+    "seed": 1337,
+    "external_hosts_contacted": []
+  }
+}

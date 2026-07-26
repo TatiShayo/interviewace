@@ -1,0 +1,10 @@
+{
+  "schema": "hermes.findings.v4",
+  "run_id": "hermes-2026-07-25-i704",
+  "project": "interviewace",
+  "phase": "8.0",
+  "produced_at": "2026-07-25T12:20:00+03:00",
+  "inputs_hash": "sha256:5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d",
+  "budget_spent": { "tokens": 92000, "wallclock_s": 220, "usd": 0.42 },
+  "findings": []
+}

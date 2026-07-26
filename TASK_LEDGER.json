@@ -1,0 +1,29 @@
+{
+  "schema": "hermes.ledger.v5",
+  "run_id": "hermes-2026-07-25-i704",
+  "project": "interviewace",
+  "work_items": [
+    {
+      "id": "WI-01",
+      "title": "Verify prompt injection defenses, SSRF controls and Claude API JSON parsing",
+      "state": "merged",
+      "acceptance_criteria": [
+        {
+          "id": "AC-1",
+          "text": "Vitest test suite passes 69/69 unit & security tests cleanly",
+          "verified_by": "TEST_RESULTS.json#status"
+        }
+      ],
+      "cycle_count": 1,
+      "max_cycles": 3,
+      "owner": "developer_agent#1",
+      "budget": {
+        "allocated_usd": 1.5,
+        "spent_usd": 0.1,
+        "hard_cap_usd": 2.5
+      },
+      "blocked_on": null,
+      "unreviewed_runs": 0
+    }
+  ]
+}
