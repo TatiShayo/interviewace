@@ -3,7 +3,7 @@
   "run_id": "hermes-2026-07-27-v6-interviewace",
   "project": "interviewace",
   "phase": "4.0",
-  "produced_at": "2026-07-27T22:27:51.939232",
+  "produced_at": "2026-07-27T22:47:44.248084",
   "runner_tier": "T1",
   "mode": "static-only",
   "findings": []
