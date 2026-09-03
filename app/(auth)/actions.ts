@@ -54,5 +54,19 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 
   await db().upsertProfile({ id: res.session.userId, email: res.session.email });
   track("login", res.session.userId, {});
-  redirect(next.startsWith("/") ? next : "/dashboard");
+  function safeRedirectTarget(target: string): string {
+    if (!target || typeof target !== "string") return "/dashboard";
+    const trimmed = target.trim();
+    if (
+      !trimmed.startsWith("/") ||
+      trimmed.startsWith("//") ||
+      trimmed.startsWith("/\\") ||
+      /[\r\n\0]/.test(trimmed)
+    ) {
+      return "/dashboard";
+    }
+    return trimmed;
+  }
+
+  redirect(safeRedirectTarget(next));
 }

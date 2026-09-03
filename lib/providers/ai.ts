@@ -27,11 +27,13 @@ export interface AiProvider {
   complete(args: { system: string; user: string; maxTokens: number; task: AiTask }): Promise<AiResult>;
 }
 
-const MODEL = "claude-sonnet-5";
-// claude-sonnet-5 pricing: $3/MTok in, $15/MTok out (cache reads cheaper; we
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022";
+// claude-3-5-sonnet pricing: $3/MTok in, $15/MTok out (cache reads cheaper; we
 // bill the conservative full rate for the budget guard).
 export function costCents(inputTokens: number, outputTokens: number): number {
-  return Math.ceil(((inputTokens * 3 + outputTokens * 15) / 1_000_000) * 100);
+  const safeIn = Math.max(0, Number.isFinite(inputTokens) ? Math.floor(inputTokens) : 0);
+  const safeOut = Math.max(0, Number.isFinite(outputTokens) ? Math.floor(outputTokens) : 0);
+  return Math.ceil(((safeIn * 3 + safeOut * 15) / 1_000_000) * 100);
 }
 
 /** Transient upstream failures worth one retry: network blips, rate limits, 5xx. */

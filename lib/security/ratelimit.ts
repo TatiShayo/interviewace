@@ -14,6 +14,8 @@ export interface RateLimitResult {
 }
 
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
+  const safeLimit = Math.max(1, Number.isFinite(limit) ? Math.floor(limit) : 1);
+  const safeWindow = Math.max(1000, Number.isFinite(windowMs) ? Math.floor(windowMs) : 60_000);
   const now = Date.now();
   // periodic sweep so the map can't grow unbounded
   if (now - lastSweep > 60_000) {
@@ -24,15 +26,16 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
     }
     lastSweep = now;
   }
-  const times = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
-  if (times.length >= limit) {
-    const oldest = Math.min(...times);
+  const times = (buckets.get(key) ?? []).filter((t) => now - t < safeWindow);
+  if (times.length >= safeLimit) {
+    const oldest = times.length > 0 ? Math.min(...times) : now;
     buckets.set(key, times);
-    return { ok: false, remaining: 0, retryAfterSeconds: Math.ceil((oldest + windowMs - now) / 1000) };
+    const retry = Math.max(1, Math.ceil((oldest + safeWindow - now) / 1000));
+    return { ok: false, remaining: 0, retryAfterSeconds: retry };
   }
   times.push(now);
   buckets.set(key, times);
-  return { ok: true, remaining: limit - times.length, retryAfterSeconds: 0 };
+  return { ok: true, remaining: safeLimit - times.length, retryAfterSeconds: 0 };
 }
 
 /** Standard limits per surface. */

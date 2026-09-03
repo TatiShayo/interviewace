@@ -42,7 +42,9 @@ function decodeSession(value: string): Session | null {
   const [payload, mac] = value.split(".");
   if (!payload || !mac) return null;
   const expected = sign(payload);
-  if (mac.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(mac), Buffer.from(expected))) return null;
+  const macBuf = Buffer.from(mac);
+  const expectedBuf = Buffer.from(expected);
+  if (macBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(macBuf, expectedBuf)) return null;
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { u: string; e: string; x: number };
     if (!data.u || !data.e || Date.now() > data.x) return null;
@@ -144,7 +146,9 @@ export async function signIn(email: string, password: string): Promise<AuthResul
   const user = readUsers().find((u) => u.email === email.toLowerCase());
   if (!user) return { ok: false, error: "Invalid email or password." };
   const hash = hashPassword(password, user.salt);
-  if (hash.length !== user.hash.length || !crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(user.hash))) {
+  const hashBuf = Buffer.from(hash);
+  const userHashBuf = Buffer.from(user.hash);
+  if (hashBuf.length !== userHashBuf.length || !crypto.timingSafeEqual(hashBuf, userHashBuf)) {
     return { ok: false, error: "Invalid email or password." };
   }
   const session = { userId: user.id, email: user.email };

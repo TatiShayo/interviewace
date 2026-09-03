@@ -144,7 +144,11 @@ class MockDb implements Db {
     const s = this.read();
     const row = s.profiles.find((x) => x.id === userId);
     if (!row) return null;
-    Object.assign(row, patch, { id: row.id });
+    const { id: _id, ...safePatch } = patch;
+    for (const [k, v] of Object.entries(safePatch)) {
+      if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
+      (row as unknown as Record<string, unknown>)[k] = v;
+    }
     this.write(s);
     return row;
   }
@@ -272,7 +276,11 @@ class MockDb implements Db {
       row = { user_id: x.user_id, stripe_customer_id: null, stripe_sub_id: null, status: "none", plan: null, current_period_end: null, updated_at: new Date().toISOString() };
       s.subscriptions.push(row);
     }
-    Object.assign(row, x, { updated_at: new Date().toISOString() });
+    for (const [k, v] of Object.entries(x)) {
+      if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
+      (row as unknown as Record<string, unknown>)[k] = v;
+    }
+    row.updated_at = new Date().toISOString();
     this.write(s);
     return row;
   }
@@ -287,10 +295,10 @@ class MockDb implements Db {
       row = { user_id: userId, day: t, input_tokens: 0, output_tokens: 0, requests: 0, cost_cents: 0 };
       s.ai_usage.push(row);
     }
-    row.input_tokens += inputTokens;
-    row.output_tokens += outputTokens;
+    row.input_tokens += Math.max(0, Number.isFinite(inputTokens) ? Math.floor(inputTokens) : 0);
+    row.output_tokens += Math.max(0, Number.isFinite(outputTokens) ? Math.floor(outputTokens) : 0);
     row.requests += 1;
-    row.cost_cents += costCents;
+    row.cost_cents += Math.max(0, Number.isFinite(costCents) ? Math.floor(costCents) : 0);
     this.write(s);
   }
   async getUsageToday(userId: string) {

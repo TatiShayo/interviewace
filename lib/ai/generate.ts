@@ -16,8 +16,8 @@ import { reportError } from "@/lib/providers/monitoring";
 
 /** Daily per-user AI budget in cents (BUILD_PROMPT: cost/user/day <= $0.15;
  * budget set above that to absorb retries, still a hard server-side cap). */
-export const DAILY_BUDGET_CENTS = Number(process.env.AI_DAILY_BUDGET_CENTS ?? 40);
-export const DAILY_REQUEST_CAP = Number(process.env.AI_DAILY_REQUEST_CAP ?? 120);
+export const DAILY_BUDGET_CENTS = Number(process.env.AI_DAILY_BUDGET_CENTS) || 40;
+export const DAILY_REQUEST_CAP = Number(process.env.AI_DAILY_REQUEST_CAP) || 120;
 
 export class AiDisabledError extends Error {
   constructor() { super("AI features are temporarily disabled"); }
@@ -109,6 +109,6 @@ function safeJson(text: string): unknown {
 function firstIssues(error: z.ZodError): string {
   return error.issues
     .slice(0, 5)
-    .map((i) => `${i.path.join(".")}: ${i.message}`)
+    .map((i) => `${i.path.length > 0 ? i.path.join(".") : "root"}: ${i.message}`)
     .join("; ");
 }

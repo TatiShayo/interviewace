@@ -17,16 +17,33 @@ const BASE_BLOCKLIST = new Set([
 ]);
 
 export function isDisposableEmail(email: string): boolean {
-  const domain = email.toLowerCase().split("@")[1]?.trim();
-  if (!domain) return true;
-  if (BASE_BLOCKLIST.has(domain)) return true;
+  if (!email || typeof email !== "string") return true;
+  const parts = email.toLowerCase().split("@");
+  if (parts.length !== 2) return true;
+  const local = parts[0]?.trim();
+  const domain = parts[1]?.trim();
+  if (!local || !domain) return true;
+
+  const isBlocked = (target: string, blocklist: Set<string> | string[]) => {
+    for (const b of blocklist) {
+      if (target === b || target.endsWith("." + b)) return true;
+    }
+    return false;
+  };
+
+  if (isBlocked(domain, BASE_BLOCKLIST)) return true;
   const extra = (process.env.DISPOSABLE_EMAIL_DOMAINS ?? "")
     .split(",")
     .map((d) => d.trim().toLowerCase())
     .filter(Boolean);
-  return extra.includes(domain);
+  return isBlocked(domain, extra);
 }
 
 export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 254;
+  if (!email || typeof email !== "string") return false;
+  if (email.length < 5 || email.length > 254) return false;
+  // RFC 5322 compatible strict check without whitespace, control chars or invalid dots
+  return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(
+    email
+  );
 }

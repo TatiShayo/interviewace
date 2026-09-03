@@ -54,9 +54,9 @@ export async function POST(req: Request) {
     if (transcript.length > MAX_TRANSCRIPT_CHARS) throw new HttpError(400, "That answer is too long — keep it under a few minutes of speech.");
     const mockSession = await db().getSession(sessionId, session.userId);
     if (!mockSession) throw new HttpError(404, "Session not found.");
+    if (mockSession.completed_at) throw new HttpError(400, "This mock session has already been completed.");
 
-    const jobs = await db().listJobs(session.userId);
-    const job = jobs.find((j) => j.id === mockSession.job_id) ?? jobs[0] ?? null;
+    const job = await db().getJob(mockSession.job_id, session.userId);
 
     const out = await generateJson({
       userId: session.userId,
