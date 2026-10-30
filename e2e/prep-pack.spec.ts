@@ -23,7 +23,6 @@ test("entitled user views the full prep pack", async ({ page }) => {
   await expect(page.getByText(/Strong-answer outline/i).first()).toBeVisible();
   await expect(page.getByText(/Why they ask:/i).first()).toBeVisible();
 
-  // Save outline to answer bank.
   const saveBtn = page.getByRole("button", { name: /Save outline/i }).first();
   await saveBtn.click();
   await expect(page.getByRole("button", { name: /^Saved$/ }).first()).toBeVisible({ timeout: 10_000 });

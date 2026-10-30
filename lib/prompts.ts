@@ -53,9 +53,7 @@ OUTPUT FORMAT:
 - Respond with a single valid JSON object and nothing else. No markdown fences, no commentary before or after.
 - Every string must be plain text (no markdown headers). Keep within the schema exactly.`;
 
-/* ------------------------------------------------------------------ */
 /* 1. Prep-pack generation                                             */
-/* ------------------------------------------------------------------ */
 
 export function prepPackSystemPrompt(company: string): string {
   const safeCo = sanitizeInline(company, 120) || "the target company";
@@ -97,9 +95,7 @@ ${wrapUntrusted(args.resumeText || "(no resume provided — outline answers gene
 Generate the prep pack JSON now.`;
 }
 
-/* ------------------------------------------------------------------ */
 /* 2. Answer scoring (strict, calibrated rubric)                       */
-/* ------------------------------------------------------------------ */
 
 export const scoringSystemPrompt = `You are a strict interview coach scoring a candidate's spoken answer. You are CALIBRATED: an average answer scores 5-6, a genuinely strong answer 7-8, and 9-10 is reserved for exceptional, hire-on-the-spot answers. Do not inflate. A rambling, generic, or unsupported answer scores 3-5.
 
@@ -130,9 +126,7 @@ ${wrapUntrusted(args.transcript, "candidate_answer_transcript")}
 Score it now.`;
 }
 
-/* ------------------------------------------------------------------ */
 /* 3. Rewriting (STAR builder suggestions)                             */
-/* ------------------------------------------------------------------ */
 
 export const starSuggestSystemPrompt = `You are an interview coach helping a candidate draft one section of a STAR answer (Situation, Task, Action, or Result). Pull ONLY from the candidate's real resume experience — never fabricate employers, projects, metrics, or outcomes. If the resume has nothing relevant, suggest the closest honest bridge and say what detail the candidate should fill in. Write in first person, 2-4 sentences, speakable.
 ${UNTRUSTED_RULES}
@@ -151,9 +145,7 @@ ${wrapUntrusted(args.resumeText || "(none provided)", "resume")}
 Write the ${section} suggestion now.`;
 }
 
-/* ------------------------------------------------------------------ */
 /* 4. Salary negotiation                                               */
-/* ------------------------------------------------------------------ */
 
 export const negotiationSystemPrompt = `You are a compensation negotiation expert who has coached hundreds of candidates to higher offers. Produce a practical negotiation script tailored to the inputs. Be concrete: exact phrases to say, numbers to anchor on, and email templates. Calibrated and professional — never aggressive, never fabricated market data presented as fact (give reasonable ranges with hedging where uncertain).
 ${UNTRUSTED_RULES}
@@ -182,9 +174,7 @@ ${wrapUntrusted(transcript, "roleplay_transcript")}
 Reply as the recruiter now.`;
 }
 
-/* ------------------------------------------------------------------ */
 /* 5. Cover letter + follow-up email                                   */
-/* ------------------------------------------------------------------ */
 
 export function coverLetterSystemPrompt(tone: string): string {
   const safeTone = sanitizeInline(tone, 60) || "professional";
@@ -214,9 +204,7 @@ ${args.extra ? `Extra context from candidate:\n${wrapUntrusted(args.extra, "cand
 Write it now.`;
 }
 
-/* ------------------------------------------------------------------ */
 /* 6. Job posting requirement extraction (onboarding insight screen)   */
-/* ------------------------------------------------------------------ */
 
 export const parseJobSystemPrompt = `You extract structured data from a job posting. Identify the job title, company name, and key requirements. If title or company are not stated, infer conservatively or use "Unknown".
 ${UNTRUSTED_RULES}

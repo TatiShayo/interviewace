@@ -80,9 +80,7 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/* ------------------------------------------------------------------ */
 /* MockDb — JSON file store for keyless local development             */
-/* ------------------------------------------------------------------ */
 
 interface MockStore {
   profiles: Profile[];
@@ -389,9 +387,7 @@ class MockDb implements Db {
   }
 }
 
-/* ------------------------------------------------------------------ */
 /* SupabaseDb — real implementation (service role, server only)       */
-/* ------------------------------------------------------------------ */
 
 class SupabaseDb implements Db {
   private c: SupabaseClient;

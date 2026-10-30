@@ -33,27 +33,21 @@ export async function signUpAndReachDashboard(page: Page): Promise<{ email: stri
 
   await page.waitForURL(/\/onboarding/, { timeout: 60_000 });
 
-  // Step 1: role
   await page.getByPlaceholder(/Senior Product Manager/i).fill("Senior Product Manager");
   await page.getByRole("button", { name: /^Continue$/ }).click();
 
-  // Step 2: experience level (auto-advances)
   await page.getByRole("button", { name: /Senior/ }).first().click();
 
-  // Step 3: interview date (in ~5 days)
   const d = new Date();
   d.setDate(d.getDate() + 5);
   const iso = d.toISOString().slice(0, 10);
   await page.locator('input[type="date"]').fill(iso);
   await page.getByRole("button", { name: /^Continue$/ }).click();
 
-  // Step 4: biggest fear (auto-advances)
   await page.getByRole("button", { name: /Behavioral/ }).first().click();
 
-  // Step 5: interview type (auto-advances)
   await page.getByRole("button", { name: /Behavioral round/ }).click();
 
-  // Step 6: paste posting + resume, build the plan
   await page.getByPlaceholder(/paste the full job description/i).fill(JOB_POSTING);
   await page.getByPlaceholder(/paste your resume text/i).fill(RESUME);
   await page.getByRole("button", { name: /Build my prep plan/i }).click();

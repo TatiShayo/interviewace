@@ -85,9 +85,7 @@ class AnthropicProvider implements AiProvider {
   }
 }
 
-/* ------------------------------------------------------------------ */
 /* Mock fixtures — realistic content, never lorem ipsum (PLAYBOOK 1.5) */
-/* ------------------------------------------------------------------ */
 
 type Cat = "behavioral" | "role_specific" | "company_culture" | "curveball";
 const MIX: Cat[] = [
